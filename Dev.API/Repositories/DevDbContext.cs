@@ -1,13 +1,13 @@
 ﻿using Dev.API.Models.Domain;
 using Microsoft.EntityFrameworkCore;
 
-namespace Dev.API.Repositary
+namespace Dev.API.Repositories
 {
-    public class DevDbContext: DbContext
+    public class DevDbContext : DbContext
     {
-        public DevDbContext(DbContextOptions dbContextOptions) :base(dbContextOptions)
+        public DevDbContext(DbContextOptions dbContextOptions) : base(dbContextOptions)
         {
-            
+
         }
 
         public DbSet<Difficulty> Difficulties { get; set; }
