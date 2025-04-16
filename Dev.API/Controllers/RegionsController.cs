@@ -1,6 +1,6 @@
 ﻿using Dev.API.Models.Domain;
 using Dev.API.Models.DTO;
-using Dev.API.Repositary;
+using Dev.API.Repositories;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,9 +13,12 @@ namespace Dev.API.Controllers
     [ApiController]
     public class RegionsController : ControllerBase
     {
-        public RegionsController(DevDbContext repositary)
+        private readonly IRegionRepository repositaryPattern;
+
+        public RegionsController(DevDbContext repositary, IRegionRepository repositaryPatter)
         {
-            Repositary = repositary;
+            this.Repositary = repositary;
+            this.repositaryPattern = repositaryPatter;
         }
 
         public DevDbContext Repositary { get; }
@@ -23,7 +26,7 @@ namespace Dev.API.Controllers
         [HttpGet]
         public async Task<IActionResult> getAll()
         {
-            var regions = await Repositary.Regions.Select(x => x).ToListAsync();
+            var regions = await repositaryPattern.getAll();
 
             var regionDTO = new List<RegionDTO>();
             foreach (var regionData in regions)
@@ -44,20 +47,16 @@ namespace Dev.API.Controllers
         [Route("{id}")]
         public async Task<IActionResult> getRegionWithId([FromRoute] Guid id)
         {
-            var regions = await Repositary.Regions.Where(x => x.Id == id).ToListAsync();
+            var regions = await repositaryPattern.getById(id);
 
-            var regionDTO = new List<RegionDTO>();
-            foreach (var regionData in regions)
+            if (regions?.Id == null) return NotFound();
+            var regionDTO = new RegionDTO()
             {
-                regionDTO.Add(new RegionDTO()
-                {
-                    Id = regionData.Id,
-                    Code = regionData.Code,
-                    RegionUrl = regionData.RegionUrl
-                });
-            }
+                Id = regions.Id,
+                Code = regions.Code,
+                RegionUrl = regions.RegionUrl
+            };
 
-            if (!regionDTO.Any()) return NotFound();
             return Ok(regionDTO);
 
         }
@@ -74,27 +73,11 @@ namespace Dev.API.Controllers
             {
                 return BadRequest(ModelState);
             }
-
-            var regionToBePersist = new List<Region>();
             var regionDTOForReturn = new List<RegionDTO>();
 
-            foreach (var regions in inputRegion)
-            {
-                var region = new Region
-                {
-                    Code = regions.Code,
-                    RegionUrl = regions.RegionUrl,
-                    Name = regions.Name
-                };
-                regionToBePersist.Add(region);
-                Repositary.AddAsync(region);
+            var createdRegions = await repositaryPattern.create(inputRegion);
 
-            }
-            await Repositary.SaveChangesAsync();
-
-            /* Using the DTO to return instead of the Domain(regionToBePersist)*/
-            
-            foreach(var RegionDTO in regionToBePersist)
+            foreach (var RegionDTO in createdRegions)
             {
                 var RegionToReturn = new RegionDTO
                 {
@@ -113,24 +96,23 @@ namespace Dev.API.Controllers
         [Route("{id:guid}")]
         public async Task<IActionResult> UpdateRegions([FromRoute] Guid id, [FromBody] InputRegionDTO inputRegionDTO)
         {
-            var resourceToUpdate = await Repositary.Regions.FirstOrDefaultAsync(x => x.Id == id);
+            Region regionForUpdate = new Region()
+            {
+                Code = inputRegionDTO.Code,
+                Name = inputRegionDTO.Name,
+                RegionUrl = inputRegionDTO.RegionUrl,
+            };
 
-            if(resourceToUpdate == null) return NotFound();
-
-            resourceToUpdate.RegionUrl = inputRegionDTO.RegionUrl;
-            resourceToUpdate.Name = inputRegionDTO.Name;
-            resourceToUpdate.Code = inputRegionDTO.Code;
-
-            Repositary.SaveChanges();
+            var updatedRegion = await repositaryPattern.update(id, regionForUpdate);
 
             // Changing Domain models to DTO for return
-
+            if(updatedRegion == null) return NotFound();
             var regionDto = new RegionDTO
             {
-                Id = resourceToUpdate.Id,
-                Code = resourceToUpdate.Code,
-                RegionUrl = resourceToUpdate.RegionUrl,
-                Name = resourceToUpdate.Name
+                Id = updatedRegion.Id,
+                Code = updatedRegion.Code,
+                RegionUrl = updatedRegion.RegionUrl,
+                Name = updatedRegion.Name
             };
 
             return Ok(regionDto);
@@ -140,12 +122,8 @@ namespace Dev.API.Controllers
         [Route("{id:guid}")]
         public async Task<IActionResult> DeleteRegion([FromRoute] Guid id)
         {
-            var resourceToRemove = await Repositary.Regions.FirstOrDefaultAsync(x => x.Id == id);
-
-            if(resourceToRemove == null) return NotFound();
-
-            Repositary.Regions.Remove(resourceToRemove);
-            Repositary.SaveChanges();
+            var regionForDelete = repositaryPattern.delete(id);
+            if (regionForDelete == null) return NotFound();
 
             return Ok();
         }

@@ -1,4 +1,4 @@
-using Dev.API.Repositary;
+using Dev.API.Repositories;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,6 +12,8 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddDbContext<DevDbContext>(options=>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("Repositary")));
+
+builder.Services.AddScoped<IRegionRepository, RegionRepository>();
 
 var app = builder.Build();
 
