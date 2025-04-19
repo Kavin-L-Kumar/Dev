@@ -1,3 +1,4 @@
+using Dev.API.Mappings;
 using Dev.API.Repositories;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,6 +15,7 @@ builder.Services.AddDbContext<DevDbContext>(options=>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("Repositary")));
 
 builder.Services.AddScoped<IRegionRepository, RegionRepository>();
+builder.Services.AddAutoMapper(typeof(AutoMapperProfiles));
 
 var app = builder.Build();
 

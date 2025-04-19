@@ -1,4 +1,5 @@
-﻿using Dev.API.Models.Domain;
+﻿using AutoMapper;
+using Dev.API.Models.Domain;
 using Dev.API.Models.DTO;
 using Dev.API.Repositories;
 using Microsoft.AspNetCore.Http;
@@ -14,11 +15,13 @@ namespace Dev.API.Controllers
     public class RegionsController : ControllerBase
     {
         private readonly IRegionRepository repositaryPattern;
+        private readonly IMapper mapper;
 
-        public RegionsController(DevDbContext repositary, IRegionRepository repositaryPatter)
+        public RegionsController(DevDbContext repositary, IRegionRepository repositaryPatter, IMapper mapper)
         {
             this.Repositary = repositary;
             this.repositaryPattern = repositaryPatter;
+            this.mapper = mapper;
         }
 
         public DevDbContext Repositary { get; }
@@ -26,18 +29,9 @@ namespace Dev.API.Controllers
         [HttpGet]
         public async Task<IActionResult> getAll()
         {
-            var regions = await repositaryPattern.getAll();
+            List<Region> regions = await repositaryPattern.getAll();
 
-            var regionDTO = new List<RegionDTO>();
-            foreach (var regionData in regions)
-            {
-                regionDTO.Add(new RegionDTO()
-                {
-                    Id = regionData.Id,
-                    Code = regionData.Code,
-                    RegionUrl = regionData.RegionUrl
-                });
-            }
+            var regionDTO = mapper.Map<List<RegionDTO>>(regions);
 
             if (!regionDTO.Any()) return NotFound();
             return Ok(regionDTO);
@@ -50,15 +44,9 @@ namespace Dev.API.Controllers
             var regions = await repositaryPattern.getById(id);
 
             if (regions?.Id == null) return NotFound();
-            var regionDTO = new RegionDTO()
-            {
-                Id = regions.Id,
-                Code = regions.Code,
-                RegionUrl = regions.RegionUrl
-            };
+            var regionDTO = mapper.Map<RegionDTO>(regions);
 
             return Ok(regionDTO);
-
         }
 
         [HttpPost]
@@ -79,13 +67,7 @@ namespace Dev.API.Controllers
 
             foreach (var RegionDTO in createdRegions)
             {
-                var RegionToReturn = new RegionDTO
-                {
-                    Id = RegionDTO.Id,
-                    Code = RegionDTO.Code,
-                    RegionUrl = RegionDTO.RegionUrl,
-                    Name = RegionDTO.Name
-                };
+                var RegionToReturn = mapper.Map<RegionDTO>(RegionDTO);
                 regionDTOForReturn.Add(RegionToReturn);
             }
 
@@ -96,25 +78,14 @@ namespace Dev.API.Controllers
         [Route("{id:guid}")]
         public async Task<IActionResult> UpdateRegions([FromRoute] Guid id, [FromBody] InputRegionDTO inputRegionDTO)
         {
-            Region regionForUpdate = new Region()
-            {
-                Code = inputRegionDTO.Code,
-                Name = inputRegionDTO.Name,
-                RegionUrl = inputRegionDTO.RegionUrl,
-            };
+            var regionForUpdate = mapper.Map<Region>(inputRegionDTO);
 
             var updatedRegion = await repositaryPattern.update(id, regionForUpdate);
 
             // Changing Domain models to DTO for return
             if(updatedRegion == null) return NotFound();
-            var regionDto = new RegionDTO
-            {
-                Id = updatedRegion.Id,
-                Code = updatedRegion.Code,
-                RegionUrl = updatedRegion.RegionUrl,
-                Name = updatedRegion.Name
-            };
 
+            var regionDto = mapper.Map<RegionDTO>(updatedRegion);
             return Ok(regionDto);
         }
 
