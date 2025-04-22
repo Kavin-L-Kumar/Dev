@@ -1,5 +1,8 @@
 using Dev.API.Repositories;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,7 +16,20 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<DevDbContext>(options=>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("Repositary")));
 
-builder.Services.AddScoped<IRegionRepository, RegionRepository>();
+builder.Services.AddScoped<IRegionRepository, DuplicateRegionRepositary>();
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options => options.TokenValidationParameters = new TokenValidationParameters
+{
+    ValidateIssuer = true,
+    ValidateAudience = true,
+    ValidateLifetime = true,
+    ValidateIssuerSigningKey = true,
+    ValidIssuer = builder.Configuration["JWT:Issuer"],
+    ValidAudience = builder.Configuration["JWT:Audience"],
+    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Key"]))
+
+});
+
 
 var app = builder.Build();
 
